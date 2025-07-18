@@ -90,22 +90,26 @@ fn main() -> Result<()> {
 
     // 5. コンポーネントをインスタンス化 (同期版)
     if let Ok(instance) = linker.instantiate(&mut store, &component){
+        let interface_name:&str ="component:tom/user-funcs";
+        let func_name:&str = "hello-world";
+
         let interface_idx = instance
-            .get_export_index(&mut store, None, "wasi:cli/run@0.2.0")
-            .expect("Cannot get `wasi:cli/run@0.2.0` interface");
+            .get_export_index(&mut store, None, interface_name)
+            .expect(format!("Cannot get `{}` interface", interface_name).as_str());
         // Get the index for the exported function in the exported interface
         let parent_export_idx = Some(&interface_idx);
         let func_idx = instance
-            .get_export_index(&mut store, parent_export_idx, "run")
-            .expect("Cannot get `run` function in `wasi:cli/run@0.2.0` interface");
+            .get_export_index(&mut store, parent_export_idx, func_name)
+            .expect(format!("Cannot get `{}` function in `{}` interface", func_name, interface_name).as_str());
         let func = instance
             .get_func(&mut store, func_idx)
             .expect("Unreachable since we've got func_idx");
-        let typed = func.typed::<(), (Result<(), ()>,)>(&store)?;
+        let typed = func.typed::<(), (String,)>(&store)?;
         let (result,) = typed.call(&mut store, ())?;
         // Required, see documentation of TypedFunc::call
         typed.post_return(&mut store)?;
-        result.map_err(|_| anyhow::anyhow!("error"));
+        println!("returned from rust component: {}", result);
+        //result.map_err(|_| anyhow::anyhow!("error"));
         println!("\n(WASIコンポーネントの実行が完了しました)");
     } else {
         println!("リンク中にエラーが発生しました");

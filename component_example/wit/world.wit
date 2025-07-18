@@ -1,0 +1,11 @@
+package component:tom;
+
+
+interface user-funcs {
+     hello-world: func() -> string;
+}
+
+/// An example world for the component to target.
+world example {
+	export user-funcs;
+}
