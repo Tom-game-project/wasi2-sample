@@ -20,8 +20,20 @@
 use anyhow::Result;
 use wasmtime::component::{Component, Linker, ResourceTable};
 use wasmtime::{Config, Engine, Store};
-use wasmtime_wasi::p2::{WasiCtx, IoView, WasiView, WasiCtxBuilder};
+
+use wasmtime_wasi::p2::{IoView, WasiCtx, WasiCtxBuilder, WasiView};
 use wasmtime_wasi::p2::bindings::sync::Command;
+
+wasmtime::component::bindgen!({
+    world: "user-service",
+    async: false,
+});
+
+
+struct Buffer{
+    debug_info :String
+}
+
 
 // ホストの状態を保持する構造体
 // WasiViewトレイトを実装することで、WASIの関数群がこの構造体にアクセスできるようになる
@@ -29,6 +41,7 @@ struct HostState {
     table: ResourceTable,
     wasi_ctx: WasiCtx,
     // アプリケーション固有の他の状態をここに追加できる
+    buf: Buffer
 }
 
 impl IoView for HostState {
@@ -49,6 +62,7 @@ impl WasiView for HostState {
 #[cfg(not(feature = "async"))]
 fn main() -> Result<()> {
 
+    let mut a = Buffer{ debug_info: String::from("hello world")};
     println!("--- 同期版 (Sync Version) ---");
 
     // 1. Engineの非同期サポートを無効化
@@ -70,18 +84,38 @@ fn main() -> Result<()> {
         .inherit_stdout()
         .inherit_stderr()
         .build();
-    
-    let host_state = HostState { table, wasi_ctx };
+
+    let host_state = HostState { table, wasi_ctx, buf:a };
     let mut store = Store::new(&engine, host_state);
 
     // 5. コンポーネントをインスタンス化 (同期版)
-    let command = Command::instantiate(&mut store, &component, &linker)?;
-    let r = command.wasi_cli_run().call_run(&mut store);
-
-    if r.is_err(){
-        println!("Some Error Occured");
+    if let Ok(instance) = linker.instantiate(&mut store, &component){
+        let interface_idx = instance
+            .get_export_index(&mut store, None, "wasi:cli/run@0.2.0")
+            .expect("Cannot get `wasi:cli/run@0.2.0` interface");
+        // Get the index for the exported function in the exported interface
+        let parent_export_idx = Some(&interface_idx);
+        let func_idx = instance
+            .get_export_index(&mut store, parent_export_idx, "run")
+            .expect("Cannot get `run` function in `wasi:cli/run@0.2.0` interface");
+        let func = instance
+            .get_func(&mut store, func_idx)
+            .expect("Unreachable since we've got func_idx");
+        let typed = func.typed::<(), (Result<(), ()>,)>(&store)?;
+        let (result,) = typed.call(&mut store, ())?;
+        // Required, see documentation of TypedFunc::call
+        typed.post_return(&mut store)?;
+        result.map_err(|_| anyhow::anyhow!("error"));
+        println!("\n(WASIコンポーネントの実行が完了しました)");
+    } else {
+        println!("リンク中にエラーが発生しました");
     }
-    println!("\n(WASIコンポーネントの実行が完了しました)");
+    //let command = Command::instantiate(&mut store, &component, &linker)?;
+    //let r = command.wasi_cli_run().call_run(&mut store);
+    //if r.is_err(){
+    //    println!("Some Error Occured");
+    //}
+
     Ok(())
 }
 

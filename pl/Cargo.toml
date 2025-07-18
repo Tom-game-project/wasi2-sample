@@ -5,10 +5,12 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0"
-wasmtime = "34.0"
+wasmtime = {version="34.0", features = ["component-model"]}
 wasmtime-wasi = "34.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"], optional = true }
+wit-bindgen-rt = { version = "0.36.0", features = ["bitflags"] }
 
 [features]
 default = []
 async = ["tokio"]
+
