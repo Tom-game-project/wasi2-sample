@@ -1,16 +1,21 @@
 #[allow(warnings)]
 mod bindings;
 
+
+//use bindings::component::tom::host_funcs;
+
 //use bindings::Guest;
 use crate::bindings::exports::component::tom::user_funcs::Guest;
+
 
 struct Component;
 
 
 impl Guest for Component {
     /// Say hello!
-    fn hello_world() -> String {
-        "Hello, World! This is Tom".to_string()
+    fn hello_world(name:String) -> String {
+        //host_funcs::name();
+        format!("Hello, World! This is {}", name)
     }
 }
 

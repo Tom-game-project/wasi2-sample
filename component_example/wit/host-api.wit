@@ -1,0 +1,12 @@
+//package host:api;
+//
+//interface host-trait{
+//  name: func() -> string;
+//}
+//
+//world hello-world {
+//  import name: func() -> string;
+//  import host-trait;
+//  // export greet: func();
+//}
+//

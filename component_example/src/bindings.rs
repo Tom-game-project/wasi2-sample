@@ -14,17 +14,22 @@ pub mod exports {
                 use super::super::super::super::_rt;
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
-                pub unsafe fn _export_hello_world_cabi<T: Guest>() -> *mut u8 {
+                pub unsafe fn _export_hello_world_cabi<T: Guest>(
+                    arg0: *mut u8,
+                    arg1: usize,
+                ) -> *mut u8 {
                     #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
-                    let result0 = T::hello_world();
-                    let ptr1 = (&raw mut _RET_AREA.0).cast::<u8>();
-                    let vec2 = (result0.into_bytes()).into_boxed_slice();
-                    let ptr2 = vec2.as_ptr().cast::<u8>();
-                    let len2 = vec2.len();
-                    ::core::mem::forget(vec2);
-                    *ptr1.add(::core::mem::size_of::<*const u8>()).cast::<usize>() = len2;
-                    *ptr1.add(0).cast::<*mut u8>() = ptr2.cast_mut();
-                    ptr1
+                    let len0 = arg1;
+                    let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
+                    let result1 = T::hello_world(_rt::string_lift(bytes0));
+                    let ptr2 = (&raw mut _RET_AREA.0).cast::<u8>();
+                    let vec3 = (result1.into_bytes()).into_boxed_slice();
+                    let ptr3 = vec3.as_ptr().cast::<u8>();
+                    let len3 = vec3.len();
+                    ::core::mem::forget(vec3);
+                    *ptr2.add(::core::mem::size_of::<*const u8>()).cast::<usize>() = len3;
+                    *ptr2.add(0).cast::<*mut u8>() = ptr3.cast_mut();
+                    ptr2
                 }
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
@@ -36,15 +41,16 @@ pub mod exports {
                     _rt::cabi_dealloc(l0, l1, 1);
                 }
                 pub trait Guest {
-                    fn hello_world() -> _rt::String;
+                    fn hello_world(name: _rt::String) -> _rt::String;
                 }
                 #[doc(hidden)]
                 macro_rules! __export_component_tom_user_funcs_cabi {
                     ($ty:ident with_types_in $($path_to_types:tt)*) => {
                         const _ : () = { #[unsafe (export_name =
                         "component:tom/user-funcs#hello-world")] unsafe extern "C" fn
-                        export_hello_world() -> * mut u8 { unsafe { $($path_to_types)*::
-                        _export_hello_world_cabi::<$ty > () } } #[unsafe (export_name =
+                        export_hello_world(arg0 : * mut u8, arg1 : usize,) -> * mut u8 {
+                        unsafe { $($path_to_types)*:: _export_hello_world_cabi::<$ty >
+                        (arg0, arg1) } } #[unsafe (export_name =
                         "cabi_post_component:tom/user-funcs#hello-world")] unsafe extern
                         "C" fn _post_return_hello_world(arg0 : * mut u8,) { unsafe {
                         $($path_to_types)*:: __post_return_hello_world::<$ty > (arg0) } }
@@ -75,6 +81,14 @@ mod _rt {
     pub fn run_ctors_once() {
         wit_bindgen_rt::run_ctors_once();
     }
+    pub use alloc_crate::vec::Vec;
+    pub unsafe fn string_lift(bytes: Vec<u8>) -> String {
+        if cfg!(debug_assertions) {
+            String::from_utf8(bytes).unwrap()
+        } else {
+            String::from_utf8_unchecked(bytes)
+        }
+    }
     pub unsafe fn cabi_dealloc(ptr: *mut u8, size: usize, align: usize) {
         if size == 0 {
             return;
@@ -83,8 +97,8 @@ mod _rt {
         alloc::dealloc(ptr, layout);
     }
     pub use alloc_crate::string::String;
-    pub use alloc_crate::alloc;
     extern crate alloc as alloc_crate;
+    pub use alloc_crate::alloc;
 }
 /// Generates `#[unsafe(no_mangle)]` functions to export the specified type as
 /// the root implementation of all generated traits.
@@ -104,7 +118,7 @@ mod _rt {
 /// ```
 #[allow(unused_macros)]
 #[doc(hidden)]
-macro_rules! __export_example_impl {
+macro_rules! __export_my_world_impl {
     ($ty:ident) => {
         self::export!($ty with_types_in self);
     };
@@ -115,19 +129,19 @@ macro_rules! __export_example_impl {
     };
 }
 #[doc(inline)]
-pub(crate) use __export_example_impl as export;
+pub(crate) use __export_my_world_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[unsafe(
-    link_section = "component-type:wit-bindgen:0.41.0:component:tom:example:encoded world"
+    link_section = "component-type:wit-bindgen:0.41.0:component:tom:my-world:encoded world"
 )]
 #[doc(hidden)]
 #[allow(clippy::octal_escapes)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 210] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07U\x01A\x02\x01A\x02\x01\
-B\x02\x01@\0\0s\x04\0\x0bhello-world\x01\0\x04\0\x18component:tom/user-funcs\x05\
-\0\x04\0\x15component:tom/example\x04\0\x0b\x0d\x01\0\x07example\x03\0\0\0G\x09p\
-roducers\x01\x0cprocessed-by\x02\x0dwit-component\x070.227.1\x10wit-bindgen-rust\
-\x060.41.0";
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 218] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\\\x01A\x02\x01A\x02\x01\
+B\x02\x01@\x01\x04names\0s\x04\0\x0bhello-world\x01\0\x04\0\x18component:tom/use\
+r-funcs\x05\0\x04\0\x16component:tom/my-world\x04\0\x0b\x0e\x01\0\x08my-world\x03\
+\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.227.1\x10wit-\
+bindgen-rust\x060.41.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {
