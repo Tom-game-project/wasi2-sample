@@ -1,11 +1,10 @@
-package host:api;
+package host:hello-world;
 
 interface host-trait{
-  name: func() -> string;
+   say-hello: func(name:string) -> string;
 }
 
 world hello-world {
-  import name: func() -> string;
+  //import say-word: func(word:string) -> string;
   import host-trait;
-  // export greet: func();
 }

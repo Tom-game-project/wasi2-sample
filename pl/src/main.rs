@@ -16,7 +16,10 @@
 */
 
 use anyhow::Result;
+use host::hello_world::host_trait;
+use host::hello_world::host_trait::Host as HostTrait;
 use wasmtime::component::{bindgen, Component, Linker, ResourceTable};
+use wasmtime::component::HasSelf;
 //use wasmtime::*;
 use wasmtime::{Config, Engine, Store};
 
@@ -48,10 +51,18 @@ struct MyState {
 
 // Imports into the world, like the `name` import for this world, are
 // satisfied through traits.
-impl HelloWorldImports for MyState {
-    fn name(&mut self) -> String {
-        println!("{}",self.name.clone());
-        self.name.clone()
+//impl HelloWorldImports for MyState 
+//{
+//    fn say_word(&mut self, word: String) -> String {
+//        println!("{}",self.name.clone());
+//        format!("{}{}", self.name.clone(), word)
+//    }
+//}
+
+impl HostTrait for MyState
+{
+    fn say_hello(&mut self,name:String,) -> String {
+        format!("Hello {}!", name)
     }
 }
 
@@ -86,18 +97,26 @@ fn main() -> Result<()> {
     // 3. LinkerにWASIの標準関数群をまとめて追加 (同期版)
     let mut linker: Linker<MyState> = Linker::new(&engine);
 
-    wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
-
     // 4. StoreにWASIのコンテキスト(WasiCtx)とテーブル(Table)を設定
     let table = ResourceTable::new();
     let wasi_ctx = WasiCtxBuilder::new()
         .inherit_stdout()
         .inherit_stderr()
         .build();
-
-    //let host_state = HostState { table, wasi_ctx, buf:a, counter: 0 };
     let my_state = MyState { table, wasi_ctx,name: "hello world from Tom".to_string()};
     let mut store = Store::new(&engine, my_state);
+
+    wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
+    //host_trait::add_to_linker(&mut linker, |s: &mut MyState| s)?;
+    HelloWorld::add_to_linker::<_, HasSelf<MyState>>(&mut linker, |s: &mut MyState| s)?;
+    //linker.root().func_wrap(
+    //        "echo",
+    //        move |mut caller: Caller<'_, ()>, ptr: i32, len: i32| {
+    //
+    //        },
+    //    )?;
+
+    //let host_state = HostState { table, wasi_ctx, buf:a, counter: 0 };
 
     // 5. コンポーネントをインスタンス化 (同期版)
     match linker.instantiate(&mut store, &component) 
@@ -123,7 +142,7 @@ fn main() -> Result<()> {
             typed.post_return(&mut store)?;
             println!("returned from rust component: {}", result);
             //result.map_err(|_| anyhow::anyhow!("error"));
-            println!("\n(WASIコンポーネントの実行が完了しました)");
+            println!("\n(WASIコンポーネントが正常に実行されました)");
         }
         Err(e)=> {
             println!("リンク中にエラーが発生しました\n{:?}", e);

@@ -1,9 +1,14 @@
 package component:tom;
 
+interface host-trait{
+   say-hello: func(name:string) -> string;
+}
+
 interface user-funcs{
   hello-world: func(name:string) -> string;
 }
 
 world my-world{
+  import host-trait;
   export user-funcs;
 }

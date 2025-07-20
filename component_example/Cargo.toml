@@ -13,3 +13,4 @@ crate-type = ["cdylib"]
 package = "component:tom"
 
 [package.metadata.component.dependencies]
+#"host:api" = { path = "../pl/wit" }

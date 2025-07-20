@@ -1,4 +1,4 @@
-//package host:api;
+//package deps:host-api;
 //
 //interface host-trait{
 //  name: func() -> string;
