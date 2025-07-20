@@ -1,14 +1,16 @@
 package component:tom;
 
-interface host-trait{
-   say-hello: func(name:string) -> string;
-}
+//use host:hello-world/host-trait;
+
+//interface host-trait{
+//   say-hello: func(name:string) -> string;
+//}
 
 interface user-funcs{
   hello-world: func(name:string) -> string;
 }
 
 world my-world{
-  import host-trait;
+  import host:hello-world/host-trait;
   export user-funcs;
 }

@@ -16,7 +16,6 @@
 */
 
 use anyhow::Result;
-use host::hello_world::host_trait;
 use host::hello_world::host_trait::Host as HostTrait;
 use wasmtime::component::{bindgen, Component, Linker, ResourceTable};
 use wasmtime::component::HasSelf;
@@ -24,22 +23,6 @@ use wasmtime::component::HasSelf;
 use wasmtime::{Config, Engine, Store};
 
 use wasmtime_wasi::p2::{IoView, WasiCtx, WasiCtxBuilder, WasiView};
-
-//bindgen!("my-world" in "wit/host-api.wit");
-//
-/*
-bindgen!(
-
-{
-  inline: r#"
-      package my:project;
-      world hello-world {
-          import name: func() -> string;
-          export greet: func();
-      }
-  "#,
-});
-*/
 
 bindgen!("hello-world" in "wit/host-api.wit");
 

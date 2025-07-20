@@ -7,4 +7,5 @@ interface host-trait{
 world hello-world {
   //import say-word: func(word:string) -> string;
   import host-trait;
+  export host-trait;
 }

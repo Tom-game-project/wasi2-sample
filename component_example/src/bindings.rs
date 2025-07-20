@@ -3,8 +3,8 @@
 //   * runtime_path: "wit_bindgen_rt"
 #[rustfmt::skip]
 #[allow(dead_code, clippy::all)]
-pub mod component {
-    pub mod tom {
+pub mod host {
+    pub mod hello_world {
         #[allow(dead_code, async_fn_in_trait, unused_imports, clippy::all)]
         pub mod host_trait {
             #[used]
@@ -30,7 +30,7 @@ pub mod component {
                     let len0 = vec0.len();
                     let ptr1 = ret_area.0.as_mut_ptr().cast::<u8>();
                     #[cfg(target_arch = "wasm32")]
-                    #[link(wasm_import_module = "component:tom/host-trait")]
+                    #[link(wasm_import_module = "host:hello-world/host-trait")]
                     unsafe extern "C" {
                         #[link_name = "say-hello"]
                         fn wit_import2(_: *mut u8, _: usize, _: *mut u8);
@@ -58,6 +58,10 @@ pub mod component {
 pub mod exports {
     pub mod component {
         pub mod tom {
+            /// use host:hello-world/host-trait;
+            /// interface host-trait{
+            ///    say-hello: func(name:string) -> string;
+            /// }
             #[allow(dead_code, async_fn_in_trait, unused_imports, clippy::all)]
             pub mod user_funcs {
                 #[used]
@@ -188,13 +192,13 @@ pub(crate) use __export_my_world_impl as export;
 )]
 #[doc(hidden)]
 #[allow(clippy::octal_escapes)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 276] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x95\x01\x01A\x02\x01\
-A\x04\x01B\x02\x01@\x01\x04names\0s\x04\0\x09say-hello\x01\0\x03\0\x18component:\
-tom/host-trait\x05\0\x01B\x02\x01@\x01\x04names\0s\x04\0\x0bhello-world\x01\0\x04\
-\0\x18component:tom/user-funcs\x05\x01\x04\0\x16component:tom/my-world\x04\0\x0b\
-\x0e\x01\0\x08my-world\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-co\
-mponent\x070.227.1\x10wit-bindgen-rust\x060.41.0";
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 279] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x98\x01\x01A\x02\x01\
+A\x04\x01B\x02\x01@\x01\x04names\0s\x04\0\x09say-hello\x01\0\x03\0\x1bhost:hello\
+-world/host-trait\x05\0\x01B\x02\x01@\x01\x04names\0s\x04\0\x0bhello-world\x01\0\
+\x04\0\x18component:tom/user-funcs\x05\x01\x04\0\x16component:tom/my-world\x04\0\
+\x0b\x0e\x01\0\x08my-world\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwi\
+t-component\x070.227.1\x10wit-bindgen-rust\x060.41.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {
