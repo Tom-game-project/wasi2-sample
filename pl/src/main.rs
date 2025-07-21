@@ -15,13 +15,14 @@
 実行したい方の関数のコメントを解除して`main`にリネームするか、
 */
 
+use std::result;
+
 use anyhow::Result;
 use host::hello_world::host_trait::Host as HostTrait;
-use wasmtime::component::{bindgen, Component, Linker, ResourceTable};
-use wasmtime::component::HasSelf;
-//use wasmtime::*;
-use wasmtime::{Config, Engine, Store};
 
+// wasmtime
+use wasmtime::component::{bindgen, Component, Linker, ResourceTable, HasSelf};
+use wasmtime::{Config, Engine, Store};
 use wasmtime_wasi::p2::{IoView, WasiCtx, WasiCtxBuilder, WasiView};
 
 bindgen!("hello-world" in "wit/host-api.wit");
@@ -32,20 +33,14 @@ struct MyState {
     name: String,
 }
 
-// Imports into the world, like the `name` import for this world, are
-// satisfied through traits.
-//impl HelloWorldImports for MyState 
-//{
-//    fn say_word(&mut self, word: String) -> String {
-//        println!("{}",self.name.clone());
-//        format!("{}{}", self.name.clone(), word)
-//    }
-//}
-
 impl HostTrait for MyState
 {
     fn say_hello(&mut self,name:String,) -> String {
         format!("Hello {}!", name)
+    }
+
+    fn set_name(&mut self, name: String){
+        self.name = name.to_string();
     }
 }
 
@@ -63,45 +58,28 @@ impl WasiView for MyState {
     }
 }
 
-/// 同期版のメイン関数
-fn main() -> Result<()> {
+/// Wasmコンポーネントの関数を実行し、更新された状態を返す。
+///
+/// # Arguments
+/// * `engine` - Wasmtimeエンジンへの参照
+/// * `linker` - 事前に設定されたリンカへの参照
+/// * `state` - Wasmコンポーネントの実行中に使用される状態。所有権はこの関数にムーブされる。
+///
+/// # Returns
+/// * 実行後に更新された状態 `MyState`
+fn run_plugin(
+    engine: &Engine,
+    linker: &Linker<MyState>, // Tは `MyState` そのもの
+    state: MyState,           // &mut MyState ではなく、所有権を受け取る
+) -> Result<MyState> {        // 更新された MyState の所有権を返す
 
-    println!("--- 同期版 (Sync Version) ---");
+    // 1. stateの所有権をStoreにムーブして、実行コンテキストを作成
+    let mut store = Store::new(engine, state);
+    let component = Component::from_file(engine, "./plugin.wasm")?;
 
-    // 1. Engineの非同期サポートを無効化
-    let mut config = Config::new();
-    config.wasm_component_model(true);
-    let engine = Engine::new(&config)?;
+    // 2. bindgen!が生成した高レベルAPIでインスタンス化
+    // これにより、型安全な`bindings`オブジェクトが得られ、コードが劇的に簡潔になる [1, 2]
 
-    // 2. WASI準拠のWebAssemblyコンポーネントを読み込む
-    //let component = Component::new(&engine, WASM_COMPONENT)?;
-    let component = Component::from_file(&engine, "./plugin.wasm")?;
-
-    // 3. LinkerにWASIの標準関数群をまとめて追加 (同期版)
-    let mut linker: Linker<MyState> = Linker::new(&engine);
-
-    // 4. StoreにWASIのコンテキスト(WasiCtx)とテーブル(Table)を設定
-    let table = ResourceTable::new();
-    let wasi_ctx = WasiCtxBuilder::new()
-        .inherit_stdout()
-        .inherit_stderr()
-        .build();
-    let my_state = MyState { table, wasi_ctx,name: "hello world from Tom".to_string()};
-    let mut store = Store::new(&engine, my_state);
-
-    wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
-    //host_trait::add_to_linker(&mut linker, |s: &mut MyState| s)?;
-    HelloWorld::add_to_linker::<_, HasSelf<MyState>>(&mut linker, |s: &mut MyState| s)?;
-    //linker.root().func_wrap(
-    //        "echo",
-    //        move |mut caller: Caller<'_, ()>, ptr: i32, len: i32| {
-    //
-    //        },
-    //    )?;
-
-    //let host_state = HostState { table, wasi_ctx, buf:a, counter: 0 };
-
-    // 5. コンポーネントをインスタンス化 (同期版)
     match linker.instantiate(&mut store, &component) 
     {
         Ok(instance) => {
@@ -131,12 +109,38 @@ fn main() -> Result<()> {
             println!("リンク中にエラーが発生しました\n{:?}", e);
         }
     }
-    //let command = Command::instantiate(&mut store, &component, &linker)?;
-    //let r = command.wasi_cli_run().call_run(&mut store);
-    //if r.is_err(){
-    //    println!("Some Error Occured");
-    //}
+    // 4. Storeを消費し、中の状態の所有権を取り戻して返す
+    Ok(store.into_data())
+}
 
+/// 同期版のメイン関数
+fn main() -> Result<()> {
+    println!("--- 同期版 (Sync Version) ---");
+
+    // 1. Engineの非同期サポートを無効化
+    let mut config = Config::new();
+    config.wasm_component_model(true);
+    let engine = Engine::new(&config)?;
+
+    // 2. WASI準拠のWebAssemblyコンポーネントを読み込む
+    //let component = Component::new(&engine, WASM_COMPONENT)?;
+
+    // 3. LinkerにWASIの標準関数群をまとめて追加 (同期版)
+    let mut linker: Linker<MyState> = Linker::new(&engine);
+
+    // 4. StoreにWASIのコンテキスト(WasiCtx)とテーブル(Table)を設定
+    let table = ResourceTable::new();
+    let wasi_ctx = WasiCtxBuilder::new()
+        .inherit_stdout()
+        .inherit_stderr()
+        .build();
+    let mut my_state = MyState { table, wasi_ctx, name: "Tom".to_string()};
+
+    wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
+    HelloWorld::add_to_linker::<_, HasSelf<MyState>>(&mut linker, |s: &mut MyState| s)?;
+    my_state = run_plugin(&engine, &linker, my_state)?;
+
+    println!("changed {}", my_state.name);
     Ok(())
 }
 
