@@ -1,0 +1,12 @@
+[package]
+name = "async-pl"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+wasmtime = {version="34.0", features = ["component-model"]}
+wasmtime-wasi = "34.0"
+tokio = { version = "1", features = ["full"]}
+
+

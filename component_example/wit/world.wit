@@ -1,11 +1,5 @@
 package component:tom;
 
-//use host:hello-world/host-trait;
-
-//interface host-trait{
-//   say-hello: func(name:string) -> string;
-//}
-
 interface user-funcs{
   hello-world: func(name:string) -> string;
 }

@@ -1,8 +1,6 @@
 #[allow(warnings)]
 mod bindings;
 
-//use bindings::component::tom::host_trait::say_hello;
-
 use bindings::host::hello_world::host_trait::say_hello;
 use bindings::host::hello_world::host_trait::set_name;
 
@@ -21,6 +19,11 @@ impl Guest for Component {
             .as_str()
         )
     }
+}
+
+fn main()
+{
+    return ;
 }
 
 bindings::export!(Component with_types_in bindings);

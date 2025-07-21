@@ -1,27 +1,11 @@
-/*
-## 実行前の準備 (Preparation)
-
-`Cargo.toml`に以下の依存関係を追加してください。
-`tokio`は非同期のサンプルでのみ必要です。
-
-## 概要 (Overview)
-
-このファイルには、WASI Preview 2コンポーネントを実行するための2つのバージョンが含まれています。
-
-1.  `main_async` (非同期版): `tokio`ランタイムを使用し、非同期APIでコンポーネントを実行します。
-2.  `main_sync` (同期版): `tokio`を使わず、同期的なAPIでコンポーネントを実行します。
-
-どちらのバージョンも同じWebAssembly Component (WATで記述) を使用します。
-実行したい方の関数のコメントを解除して`main`にリネームするか、
-*/
+// wasmtime
+use wasmtime::component::{self, bindgen, Component, HasSelf, Linker, ResourceTable};
+use wasmtime::{Config, Engine, Store, Error};
+use wasmtime_wasi::p2::{IoView, WasiCtx, WasiCtxBuilder, WasiView};
+use host::hello_world::host_trait::Host as HostTrait;
+use wasmtime_wasi::p2::bindings::Command;
 
 use anyhow::Result;
-use host::hello_world::host_trait::Host as HostTrait;
-
-// wasmtime
-use wasmtime::component::{bindgen, Component, Linker, ResourceTable, HasSelf};
-use wasmtime::{Config, Engine, Store};
-use wasmtime_wasi::p2::{IoView, WasiCtx, WasiCtxBuilder, WasiView};
 
 bindgen!("hello-world" in "wit/host-api.wit");
 
@@ -33,11 +17,11 @@ struct MyState {
 
 impl HostTrait for MyState
 {
-    fn say_hello(&mut self, name:String) -> String {
+    fn say_hello(&mut self, name:String,) -> String {
         format!("Hello {}!", name)
     }
 
-    fn set_name(&mut self, name: String){
+    fn set_name(&mut self, name: String) {
         self.name = name.to_string();
     }
 }
@@ -56,16 +40,7 @@ impl WasiView for MyState {
     }
 }
 
-/// Wasmコンポーネントの関数を実行し、更新された状態を返す。
-///
-/// # Arguments
-/// * `engine` - Wasmtimeエンジンへの参照
-/// * `linker` - 事前に設定されたリンカへの参照
-/// * `state` - Wasmコンポーネントの実行中に使用される状態。所有権はこの関数にムーブされる。
-///
-/// # Returns
-/// * 実行後に更新された状態 `MyState`
-fn run_plugin(
+async fn run_plugin(
     engine: &Engine,
     component: &Component,
     linker: &Linker<MyState>, // Tは `MyState` そのもの
@@ -78,7 +53,7 @@ fn run_plugin(
     // 2. bindgen!が生成した高レベルAPIでインスタンス化
     // これにより、型安全な`bindings`オブジェクトが得られ、コードが劇的に簡潔になる [1, 2]
 
-    match linker.instantiate(&mut store, &component) 
+    match linker.instantiate_async(&mut store, &component).await
     {
         Ok(instance) => {
             let interface_name:&str ="component:tom/user-funcs";
@@ -96,8 +71,8 @@ fn run_plugin(
                 .get_func(&mut store, func_idx)
                 .expect("Unreachable since we've got func_idx");
             let typed = func.typed::<(String, ), (String,)>(&store)?;
-            let (result,) = typed.call(&mut store, ("Tomoo".to_string(),))?;
-            typed.post_return(&mut store)?;
+            let (result,) = typed.call_async(&mut store, ("Tomoo".to_string(),)).await?;
+            typed.post_return_async(&mut store).await;
             println!("returned from rust component: {}", result);
             println!("\n(WASIコンポーネントが正常に実行されました)");
         }
@@ -109,34 +84,38 @@ fn run_plugin(
     Ok(store.into_data())
 }
 
-/// 同期版のメイン関数
-fn main() -> Result<()> {
-    println!("--- 同期版 (Sync Version) ---");
-
-    // 1. Engineの非同期サポートを無効化
+#[tokio::main]
+async fn main() -> Result<(), Error> {
+    // Construct the wasm engine with async support enabled.
     let mut config = Config::new();
-    config.wasm_component_model(true);
-    let engine = Engine::new(&config)?;
+    config.async_support(true);
+    let engine = Engine::new(&config).expect("engin error occured");
 
-    // 2. WASI準拠のWebAssemblyコンポーネントを読み込む
+    let mut linker = Linker::new(&engine);
+    wasmtime_wasi::p2::add_to_linker_async(&mut linker);
+    HelloWorld::add_to_linker::<_, HasSelf<MyState>>(&mut linker, |s: &mut MyState| s);
 
-    // 3. LinkerにWASIの標準関数群をまとめて追加 (同期版)
-    let mut linker: Linker<MyState> = Linker::new(&engine);
-
-    // 4. StoreにWASIのコンテキスト(WasiCtx)とテーブル(Table)を設定
+    // Create a WASI context and put it in a Store; all instances in the store
+    // share this context. `WasiCtxBuilder` provides a number of ways to
+    // configure what the target program will have access to.
     let table = ResourceTable::new();
     let wasi_ctx = WasiCtxBuilder::new()
         .inherit_stdout()
         .inherit_stderr()
         .build();
-    let mut my_state = MyState { table, wasi_ctx, name: "Tom".to_string()};
 
-    wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
-    HelloWorld::add_to_linker::<_, HasSelf<MyState>>(&mut linker, |s: &mut MyState| s)?;
-    let component = Component::from_file(&engine, "./plugin.wasm")?;
-    my_state = run_plugin(&engine, &component, &linker, my_state)?; // wasmコンポーネントの実行中一時的にリソースの所有権を移す
+    let mut state = MyState { table, wasi_ctx, name: "Tom".to_string()};
 
-    println!("my_state.name \"{}\"", my_state.name);
+    // Instantiate our component with the imports we've created, and run it.
+    let component = Component::from_file(&engine, "./plugin.wasm").expect("component error occured");
+
+    // println!("instantiate_async");
+    // let command = Command::instantiate_async(&mut store, &component, &linker).await?;
+    // println!("call function");
+    // let program_result = command.wasi_cli_run().call_run(&mut store).await?;
+
+    state = run_plugin(&engine, &component, &linker, state)
+        .await
+        .expect("ここのエラーはしっかり処理する必要が在る"); // TODO
     Ok(())
 }
-
