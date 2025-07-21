@@ -85,15 +85,15 @@ async fn run_plugin(
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() -> Result<(), anyhow::Error> {
     // Construct the wasm engine with async support enabled.
     let mut config = Config::new();
     config.async_support(true);
     let engine = Engine::new(&config).expect("engin error occured");
 
     let mut linker = Linker::new(&engine);
-    wasmtime_wasi::p2::add_to_linker_async(&mut linker);
-    HelloWorld::add_to_linker::<_, HasSelf<MyState>>(&mut linker, |s: &mut MyState| s);
+    wasmtime_wasi::p2::add_to_linker_async(&mut linker)?;
+    HelloWorld::add_to_linker::<_, HasSelf<MyState>>(&mut linker, |s: &mut MyState| s)?;
 
     // Create a WASI context and put it in a Store; all instances in the store
     // share this context. `WasiCtxBuilder` provides a number of ways to
@@ -117,5 +117,6 @@ async fn main() -> Result<(), Error> {
     state = run_plugin(&engine, &component, &linker, state)
         .await
         .expect("ここのエラーはしっかり処理する必要が在る"); // TODO
+    println!("state.name: {}", state.name);
     Ok(())
 }
