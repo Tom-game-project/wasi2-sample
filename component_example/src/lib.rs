@@ -9,7 +9,6 @@ use bindings::host::hello_world::host_trait::set_name;
 //use bindings::Guest;
 use crate::bindings::exports::component::tom::user_funcs::Guest;
 
-
 struct Component;
 
 impl Guest for Component {

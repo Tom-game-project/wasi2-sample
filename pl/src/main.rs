@@ -15,8 +15,6 @@
 実行したい方の関数のコメントを解除して`main`にリネームするか、
 */
 
-use std::result;
-
 use anyhow::Result;
 use host::hello_world::host_trait::Host as HostTrait;
 
@@ -69,13 +67,13 @@ impl WasiView for MyState {
 /// * 実行後に更新された状態 `MyState`
 fn run_plugin(
     engine: &Engine,
+    component: &Component,
     linker: &Linker<MyState>, // Tは `MyState` そのもの
     state: MyState,           // &mut MyState ではなく、所有権を受け取る
 ) -> Result<MyState> {        // 更新された MyState の所有権を返す
 
     // 1. stateの所有権をStoreにムーブして、実行コンテキストを作成
     let mut store = Store::new(engine, state);
-    let component = Component::from_file(engine, "./plugin.wasm")?;
 
     // 2. bindgen!が生成した高レベルAPIでインスタンス化
     // これにより、型安全な`bindings`オブジェクトが得られ、コードが劇的に簡潔になる [1, 2]
@@ -99,10 +97,8 @@ fn run_plugin(
                 .expect("Unreachable since we've got func_idx");
             let typed = func.typed::<(String, ), (String,)>(&store)?;
             let (result,) = typed.call(&mut store, ("Tomoo".to_string(),))?;
-            // Required, see documentation of TypedFunc::call
             typed.post_return(&mut store)?;
             println!("returned from rust component: {}", result);
-            //result.map_err(|_| anyhow::anyhow!("error"));
             println!("\n(WASIコンポーネントが正常に実行されました)");
         }
         Err(e)=> {
@@ -123,7 +119,6 @@ fn main() -> Result<()> {
     let engine = Engine::new(&config)?;
 
     // 2. WASI準拠のWebAssemblyコンポーネントを読み込む
-    //let component = Component::new(&engine, WASM_COMPONENT)?;
 
     // 3. LinkerにWASIの標準関数群をまとめて追加 (同期版)
     let mut linker: Linker<MyState> = Linker::new(&engine);
@@ -138,9 +133,10 @@ fn main() -> Result<()> {
 
     wasmtime_wasi::p2::add_to_linker_sync(&mut linker)?;
     HelloWorld::add_to_linker::<_, HasSelf<MyState>>(&mut linker, |s: &mut MyState| s)?;
-    my_state = run_plugin(&engine, &linker, my_state)?;
+    let component = Component::from_file(&engine, "./plugin.wasm")?;
+    my_state = run_plugin(&engine, &component, &linker, my_state)?; // wasmコンポーネントの実行中一時的にリソースの所有権を移す
 
-    println!("changed {}", my_state.name);
+    println!("my_state.name \"{}\"", my_state.name);
     Ok(())
 }
 
