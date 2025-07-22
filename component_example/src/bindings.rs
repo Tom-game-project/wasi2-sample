@@ -77,10 +77,6 @@ pub mod host {
 pub mod exports {
     pub mod component {
         pub mod tom {
-            /// use host:hello-world/host-trait;
-            /// interface host-trait{
-            ///    say-hello: func(name:string) -> string;
-            /// }
             #[allow(dead_code, async_fn_in_trait, unused_imports, clippy::all)]
             pub mod user_funcs {
                 #[used]
