@@ -1,9 +1,8 @@
 // wasmtime
-use wasmtime::component::{self, bindgen, Component, HasSelf, Linker, ResourceTable};
-use wasmtime::{Config, Engine, Store, Error};
+use wasmtime::component::{bindgen, Component, HasSelf, Linker, ResourceTable};
+use wasmtime::{Config, Engine, Store};
 use wasmtime_wasi::p2::{IoView, WasiCtx, WasiCtxBuilder, WasiView};
 use host::hello_world::host_trait::Host as HostTrait;
-use wasmtime_wasi::p2::bindings::Command;
 
 use anyhow::Result;
 
