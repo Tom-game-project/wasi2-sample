@@ -6,18 +6,24 @@ COMPONENT_EXAMPLE_TARGET=component_example/target/wasm32-wasip1/debug/component_
 ASYNC_EXAMPLE_DIR=async-host
 SYNC_EXAMPLE_DIR=sync-host
 
-$(COMPONENT_EXAMPLE_TARGET):
-	cargo component build --manifest-path $(COMPONENT_EXAMPLE_CARGO_TOML)
-
 ### --- commands --- ###
 
-set-plugin-wasm: $(PLUGIN_SET_PATH) build-component
+set-plugin-wasm: 
+	cargo component build --manifest-path $(COMPONENT_EXAMPLE_CARGO_TOML)
 	cp $(COMPONENT_EXAMPLE_TARGET) ./plugin.wasm
+
+#### --- clean --- ####
 
 clean-component-example:
 	cargo component clean --manifest-path $(COMPONENT_EXAMPLE_CARGO_TOML)
 
-build-component: $(COMPONENT_EXAMPLE_TARGET)
+clean-sync-host:
+	cargo clean --manifest-path $(SYNC_EXAMPLE_DIR)/Cargo.toml
+
+clean-async-host:
+	cargo clean --manifest-path $(ASYNC_EXAMPLE_DIR)/Cargo.toml
+
+clean-all: clean-component-example clean-sync-host clean-async-host
 
 async-test:PLUGIN_SET_PATH=$(ASYNC_EXAMPLE_DIR)
 async-test: set-plugin-wasm
@@ -29,6 +35,9 @@ sync-test: set-plugin-wasm
 
 .PHONY: \
 	set-plugin-wasm \
-	build-component \
 	async-test \
 	sync-test \
+	clean-component-example \
+	clean-sync-host \
+	clean-async-host \
+	clean-all \
