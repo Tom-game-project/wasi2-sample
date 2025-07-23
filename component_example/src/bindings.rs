@@ -51,6 +51,42 @@ pub mod host {
                 }
             }
             #[allow(unused_unsafe, clippy::all)]
+            pub fn get_name() -> _rt::String {
+                unsafe {
+                    #[cfg_attr(target_pointer_width = "64", repr(align(8)))]
+                    #[cfg_attr(target_pointer_width = "32", repr(align(4)))]
+                    struct RetArea(
+                        [::core::mem::MaybeUninit<
+                            u8,
+                        >; 2 * ::core::mem::size_of::<*const u8>()],
+                    );
+                    let mut ret_area = RetArea(
+                        [::core::mem::MaybeUninit::uninit(); 2
+                            * ::core::mem::size_of::<*const u8>()],
+                    );
+                    let ptr0 = ret_area.0.as_mut_ptr().cast::<u8>();
+                    #[cfg(target_arch = "wasm32")]
+                    #[link(wasm_import_module = "host:hello-world/host-trait")]
+                    unsafe extern "C" {
+                        #[link_name = "get-name"]
+                        fn wit_import1(_: *mut u8);
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    unsafe extern "C" fn wit_import1(_: *mut u8) {
+                        unreachable!()
+                    }
+                    unsafe { wit_import1(ptr0) };
+                    let l2 = *ptr0.add(0).cast::<*mut u8>();
+                    let l3 = *ptr0
+                        .add(::core::mem::size_of::<*const u8>())
+                        .cast::<usize>();
+                    let len4 = l3;
+                    let bytes4 = _rt::Vec::from_raw_parts(l2.cast(), len4, len4);
+                    let result5 = _rt::string_lift(bytes4);
+                    result5
+                }
+            }
+            #[allow(unused_unsafe, clippy::all)]
             pub fn set_name(name: &str) -> () {
                 unsafe {
                     let vec0 = name;
@@ -207,14 +243,14 @@ pub(crate) use __export_my_world_impl as export;
 )]
 #[doc(hidden)]
 #[allow(clippy::octal_escapes)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 303] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xb0\x01\x01A\x02\x01\
-A\x04\x01B\x04\x01@\x01\x04names\0s\x04\0\x09say-hello\x01\0\x01@\x01\x04names\x01\
-\0\x04\0\x08set-name\x01\x01\x03\0\x1bhost:hello-world/host-trait\x05\0\x01B\x02\
-\x01@\x01\x04names\0s\x04\0\x0bhello-world\x01\0\x04\0\x18component:tom/user-fun\
-cs\x05\x01\x04\0\x16component:tom/my-world\x04\0\x0b\x0e\x01\0\x08my-world\x03\0\
-\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.227.1\x10wit-bi\
-ndgen-rust\x060.41.0";
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 321] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xc2\x01\x01A\x02\x01\
+A\x04\x01B\x06\x01@\x01\x04names\0s\x04\0\x09say-hello\x01\0\x01@\0\0s\x04\0\x08\
+get-name\x01\x01\x01@\x01\x04names\x01\0\x04\0\x08set-name\x01\x02\x03\0\x1bhost\
+:hello-world/host-trait\x05\0\x01B\x02\x01@\x01\x04names\0s\x04\0\x0bhello-world\
+\x01\0\x04\0\x18component:tom/user-funcs\x05\x01\x04\0\x16component:tom/my-world\
+\x04\0\x0b\x0e\x01\0\x08my-world\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\
+\x0dwit-component\x070.227.1\x10wit-bindgen-rust\x060.41.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

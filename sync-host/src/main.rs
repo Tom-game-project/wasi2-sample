@@ -37,6 +37,10 @@ impl HostTrait for MyState
         format!("Hello {}!", name)
     }
 
+    fn get_name(&mut self) -> String {
+        self.name.clone()
+    }
+
     fn set_name(&mut self, name: String){
         self.name = name.to_string();
     }

@@ -2,11 +2,11 @@ package host:hello-world;
 
 interface host-trait{
    say-hello: func(name:string) -> string;
+   get-name: func() -> string;
    set-name: func(name:string);
 }
 
 world hello-world {
-  //import say-word: func(word:string) -> string;
   import host-trait;
   export host-trait;
 }
