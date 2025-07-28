@@ -6,7 +6,7 @@ use host::hello_world::host_trait::Host as HostTrait;
 
 use anyhow::Result;
 
-bindgen!("hello-world" in "wit/host-api.wit");
+bindgen!("hello-world" in "../wit/host-api.wit");
 
 struct MyState {
     table: ResourceTable,

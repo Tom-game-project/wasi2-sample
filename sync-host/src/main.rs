@@ -23,7 +23,7 @@ use wasmtime::component::{bindgen, Component, Linker, ResourceTable, HasSelf};
 use wasmtime::{Config, Engine, Store};
 use wasmtime_wasi::p2::{IoView, WasiCtx, WasiCtxBuilder, WasiView};
 
-bindgen!("hello-world" in "wit/host-api.wit");
+bindgen!("hello-world" in "../wit/host-api.wit");
 
 struct MyState {
     table: ResourceTable,

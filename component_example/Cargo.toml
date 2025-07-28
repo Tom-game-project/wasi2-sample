@@ -13,4 +13,4 @@ crate-type = ["cdylib"]
 package = "component:tom"
 
 [package.metadata.component.target.dependencies]
-"host:hello-world" = { path = "../sync-host/wit" }
+"host:hello-world" = { path = "../wit" }
