@@ -1,7 +1,7 @@
 [package]
 name = "playground-jco"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,6 +9,9 @@ edition = "2021"
 wit-bindgen = { version = "0.18.0", default-features = false, features = [
     "realloc",
 ] }
+
+wit-bindgen-rt = { version = "0.43.0", features = ["bitflags"] }
+
 
 [lib]
 crate-type = ["cdylib"]

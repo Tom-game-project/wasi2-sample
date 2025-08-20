@@ -11,3 +11,5 @@ impl Guest for Component {
         s.into()
     }
 }
+
+bindings::export!(Component with_types_in bindings);
